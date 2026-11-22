@@ -1,0 +1,27 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract zip if needed
+        run: |
+          if [ -f "callai-nov-22-2026-4-56-45-pm.zip" ]; then
+            unzip -q callai-nov-22-2026-4-56-45-pm.zip -d extracted_proj
+            if [ -f "extracted_proj/gradlew" ]; then
+              cp -r extracted_proj/* .
+            elif [ -d "extracted_proj/"* ]; then
+              cp -r extracted_proj/*/* .
+            fi
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - run: chmod +x gradlew
+      - run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: "**/build/outputs/apk/debug/*.apk"
