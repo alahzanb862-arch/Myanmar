@@ -5,23 +5,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract zip if needed
+      - name: Extract zip and locate project root
         run: |
           if [ -f "callai-nov-22-2026-4-56-45-pm.zip" ]; then
             unzip -q callai-nov-22-2026-4-56-45-pm.zip -d extracted_proj
-            if [ -f "extracted_proj/gradlew" ]; then
-              cp -r extracted_proj/* .
-            elif [ -d "extracted_proj/"* ]; then
-              cp -r extracted_proj/*/* .
-            fi
           fi
-      - uses: actions/setup-java@v4
+          echo "=== Contents of repo ==="
+          ls -la
+          echo "=== Contents of extracted_proj ==="
+          ls -la extracted_proj 2>/dev/null || true
+          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
+          echo "Found gradlew at: $GRADLEW_PATH"
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: No gradlew found in repository or zip!"
+            exit 1
+          fi
+          PROJ_DIR=$(dirname "$GRADLEW_PATH")
+          echo "proj_dir=$PROJ_DIR" >> $GITHUB_ENV
+          chmod +x "$GRADLEW_PATH"
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
-      - run: chmod +x gradlew
-      - run: ./gradlew assembleDebug
+      - name: Assemble Debug APK
+        run: |
+          cd "$proj_dir"
+          ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: "**/build/outputs/apk/debug/*.apk"
+          
